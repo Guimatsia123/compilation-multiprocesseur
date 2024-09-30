@@ -29,4 +29,4 @@ add_custom_target(remise
         "${CMAKE_PROJECT_NAME}"
         --destdir="${CMAKE_CURRENT_BINARY_DIR}"
 )
-
+find_package(Catch2 2.13.8 REQUIRED)
