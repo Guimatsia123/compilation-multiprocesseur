@@ -53,8 +53,10 @@ int jml_main(struct jml_app* app) {
    */
     struct list *source_files;  // List of source files
     struct list *compile_commands;  // List of compile commands
+    struct list *list_obj_files;
     int result;
     source_files = list_new(NULL, free);
+    list_obj_files = list_new(NULL, free );
   //  compile_commands = list_new(NULL, free);
 
     printf("Printing source files from directory %s ...\n", app->sourcedir);
@@ -102,6 +104,8 @@ int jml_main(struct jml_app* app) {
             snprintf(obj_file, sizeof(obj_file), "%s/%s.o", app->builddir, strrchr(source_file, '/') + 1);  // Object file path
 
             jml_command_append(&compile_cmd, obj_file);  // Output object file
+            struct list_node *new_file =  list_node_new(strdup(obj_file));
+            list_push_back(list_obj_files, new_file);
 
             // Optionally, add CFLAGS from the app structure if provided
             if (app->cflags) {
@@ -127,6 +131,27 @@ int jml_main(struct jml_app* app) {
   /*
    * Phase 3: Édition des liens (link)
    */
+        struct command edit_link_cmd;
+        jml_command_init(&edit_link_cmd);
+        jml_command_append(&edit_link_cmd, "gcc");
+        jml_command_append(&edit_link_cmd, "-o");  // Compile flag
+        char exec_file[256];
+        snprintf(exec_file, sizeof(exec_file), "%s/%s", app->builddir, app->progname);
+        jml_command_append(&edit_link_cmd, exec_file);
+
+        struct list_node* object_file = list_head(list_obj_files);
+        while(!list_end(object_file)){
+            jml_command_append(&edit_link_cmd, object_file->data);
+            object_file = object_file->next;
+        }
+        // Optionally, add libraries if specified
+        if (app->libs) {
+            jml_command_append_many(&edit_link_cmd, app->libs, " ");
+        }
+        jml_command_exec_one(&edit_link_cmd);
+        jml_command_print(&edit_link_cmd, stdout);
+
+        jml_command_destroy(&edit_link_cmd);
 
   return 0;
 }
