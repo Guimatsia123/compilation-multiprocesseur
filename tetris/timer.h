@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 #define TIMER_NAMES \
 X(SDL_Delay), \

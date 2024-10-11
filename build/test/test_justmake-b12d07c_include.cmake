@@ -1,0 +1,5 @@
+if(EXISTS "/home/marius/Bureau/session4/INF3173/TP/tp1/inf3173-243-tp1-v2-etudiant/build/test/test_justmake-b12d07c_tests.cmake")
+  include("/home/marius/Bureau/session4/INF3173/TP/tp1/inf3173-243-tp1-v2-etudiant/build/test/test_justmake-b12d07c_tests.cmake")
+else()
+  add_test(test_justmake_NOT_BUILT-b12d07c test_justmake_NOT_BUILT-b12d07c)
+endif()

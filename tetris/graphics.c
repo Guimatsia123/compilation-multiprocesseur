@@ -1,6 +1,6 @@
 #include "font.h"
 #include "tet.h"
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 #include "utils.h"
 

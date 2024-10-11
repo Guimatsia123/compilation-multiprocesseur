@@ -5,7 +5,7 @@
 // 3. Play tones with audio_tone()
 
 #include <math.h>
-#include <SDL_audio.h>
+#include <SDL2/SDL_audio.h>
 #include "audio.h"
 
 struct envelope envs[NUM_ENVS];
