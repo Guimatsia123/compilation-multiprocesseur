@@ -1,3 +1,8 @@
+ /* Autheurs :
+ * MARIUS GUIMATSIA AKALONG GUIM27309006
+ * SENAYAH KOSSIWA SENK14299107
+*/
+
 #include "jml.h"
 #include <dirent.h>
 #include <getopt.h>
@@ -11,13 +16,17 @@
 #include "cwalk.h"
 #include "utils.h"
 
-// Verifie si le fichier a l'extension donnée (par exemple, ".c")
+/*
+ * Verifie si le fichier a l'extension donnée (par exemple, ".c")
+ */
 int has_c_extension(const char *filename, const char *ext) {
     const char *dot = strrchr(filename, '.');
     return (dot && strcmp(dot, ext) == 0);
 }
 
-// Fonction pour creer un repertoire s'il n'existe pas.
+/*
+* Fonction pour creer un repertoire s'il n'existe pas.
+*/
 int create_build_directory(const char* builddir) {
     struct stat st;
     if (stat(builddir, &st) == -1) {
@@ -26,7 +35,6 @@ int create_build_directory(const char* builddir) {
             return -1;
         }
     } else if (!S_ISDIR(st.st_mode)) {
-        // If it exists but it's not a directory, return an error
         fprintf(stderr, "Error: %s exists but is not a directory\n", builddir);
         return -1;
     }
@@ -34,26 +42,19 @@ int create_build_directory(const char* builddir) {
     return 0;
 }
 
-// Remove the file extension from the filename
+/*
+* Enlever l'extension dans le nom de fichier
+*/
 void remove_extension(char* filename) {
     char* file = strrchr(filename, '.');
     if (file) *file = '\0';
 }
 
-// Point d'entrée du programme principal
-int jml_main(struct jml_app* app) {
-  /*
-   * Phase 1: Lister les fichiers sources à compiler
-   */
-    struct list *source_files;        // List of source files
-    struct list *compile_commands;    // List of compile commands
-    struct list *list_obj_files;      // List of object files
-    int result;
 
-    source_files = list_new(NULL, free);
-    list_obj_files = list_new(NULL, free);
-    compile_commands = list_new(NULL, jml_command_free);
-
+/*
+* Fonction pour lister les fichiers sources à compiler
+*/
+void list_directory(struct list *source_files, struct jml_app *app){
     printf("Step 1 : Printing source files from directory %s ...\n", app->sourcedir);
     jml_listdir(source_files, app->sourcedir, ".c");
 
@@ -62,10 +63,13 @@ int jml_main(struct jml_app* app) {
       printf("%s \n", (char*)node->data);
       node = node->next;
     }
+}
 
-  /*
-   * Phase 2: Compiler les sources
-   */
+/*
+* Fonction pour compiler les sources
+*/
+int compile_source( struct list *source_files, struct list *compile_commands, struct list *list_obj_files, struct jml_app* app){
+    int result;
     printf("Step 2 : Compiling source files...\n");
 
     struct list_node* node1 = list_head(source_files);
@@ -80,9 +84,7 @@ int jml_main(struct jml_app* app) {
         }
         jml_command_init(compile_cmd);
 
-        /*
-         * Ensure the build directory exists
-         */
+        //s'assurer que le repertoire existe
         result = create_build_directory(app->builddir);
         if (result != 0) {
             perror("Error creating build directory");
@@ -93,39 +95,38 @@ int jml_main(struct jml_app* app) {
             return -1;
         }
 
-        // Construct the compile command (e.g., gcc -c source.c -o source.o)
+        // Construire la commande de compilation (e.g., gcc -c source.c -o source.o)
         jml_command_append(compile_cmd, "gcc");
         jml_command_append(compile_cmd, "-c");  // Compile flag
         jml_command_append(compile_cmd, source_file);  // Source file
         jml_command_append(compile_cmd, "-o");
 
-        // Copy the source file name and remove the extension to create the object file name
+        // Copie le nom du fichier source et enlever l'extension pour creer le nom du fichier objet
         char obj_file[256];
         char filename_copy[256];
         strncpy(filename_copy, source_file, sizeof(filename_copy));
         remove_extension(filename_copy);
 
-        snprintf(obj_file, sizeof(obj_file), "%s/%s.o", app->builddir, strrchr(filename_copy, '/') + 1);  // Object file path
-        jml_command_append(compile_cmd, obj_file);  // Output object file
+        snprintf(obj_file, sizeof(obj_file), "%s/%s.o", app->builddir, strrchr(filename_copy, '/') + 1);  // chemin du fichier objet
+        jml_command_append(compile_cmd, obj_file);  // sortie du fichier objet
 
         struct list_node *new_file = list_node_new(strdup(obj_file));
         list_push_back(list_obj_files, new_file);
 
-        // Optionally, add CFLAGS from the app structure if provided
+        // Ajouter les CFLAGS s'il en existe
         if (app->cflags) {
             jml_command_append_many(compile_cmd, app->cflags, " ");
         }
 
-        // Append the command to the list of compile commands
+        // Rajouter la commande a la liste des commandes a compiler
         struct list_node *new_cmd = list_node_new(compile_cmd);
         list_push_back(compile_commands, new_cmd);
 
         node1 = node1->next;
-        //jml_command_destroy(compile_cmd);
 
     }
 
-    // Execute all the compile commands
+    // Executer toutes les commandes
     if (jml_command_exec_all(compile_commands, app->nproc, app->keep_going) != 0) {
         fprintf(stderr, "Error compiling source files\n");
         list_free(source_files);
@@ -135,9 +136,14 @@ int jml_main(struct jml_app* app) {
         return -1;
     }
 
+    return 0;
+}
+
+
   /*
-   * Phase 3: Édition des liens (link)
+   * Fonction pour editer des liens
    */
+void edit_link(struct list *source_files, struct list *compile_commands, struct list *list_obj_files, struct jml_app* app){
     printf("Step 3 : Creating exec file...\n");
 
     struct command edit_link_cmd;
@@ -155,7 +161,7 @@ int jml_main(struct jml_app* app) {
         object_file = object_file->next;
     }
 
-    // Optionally, add libraries if specified
+    // Ajouter les librairies si specifie
     if (app->libs) {
         jml_command_append_many(&edit_link_cmd, app->libs, " ");
     }
@@ -167,6 +173,29 @@ int jml_main(struct jml_app* app) {
     list_free(source_files);
     list_free(list_obj_files);
     list_free(compile_commands);
+}
+
+
+// Point d'entrée du programme principal
+int jml_main(struct jml_app* app) {
+    struct list *source_files;        // Listes des fichiers sources
+    struct list *compile_commands;    // Listes des commandes a compiler
+    struct list *list_obj_files;      // Listes des fichiers objets
+    //int result;
+
+    source_files = list_new(NULL, free);
+    list_obj_files = list_new(NULL, free);
+    compile_commands = list_new(NULL, jml_command_free);
+
+    // Phase 1: Lister les fichiers sources à compiler
+    list_directory(source_files, app);
+
+    // Phase 2: Compiler les sources
+    compile_source(source_files, compile_commands, list_obj_files, app);
+
+    //Phase 3: Édition des liens (link)
+    edit_link(source_files, compile_commands, list_obj_files, app);
+  
 
     return 0;
 }
@@ -211,7 +240,7 @@ int jml_command_exec_one(struct command* cmd) {
     } else if (pid == 0) {
         execvp(cmd->args[0], cmd->args);
         perror("Error: execvp");
-        exit(EXIT_FAILURE);  // Child process exits on failure
+        exit(EXIT_FAILURE);
     } else {
         int status;
         if (waitpid(pid, &status, 0) == -1) {
