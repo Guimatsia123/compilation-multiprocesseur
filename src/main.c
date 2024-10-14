@@ -8,7 +8,8 @@
 
 #include "jml.h"
 
-void print_usage() {
+void
+print_usage() {
   fprintf(stderr,
           "Usage: %s "
           "-j N "
